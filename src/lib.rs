@@ -183,8 +183,16 @@ performance in some cases. For that reason, prefilters can be disabled via
 
 // We can never be truly no_std, but we could be alloc-only some day, so
 // require the std feature for now.
+
+#![cfg_attr(all(feature = "mesalock_sgx", not(target_env = "sgx")), no_std)]
+#![cfg_attr(all(target_env = "sgx", target_vendor = "mesalock"), feature(rustc_private))]
+
 #[cfg(not(feature = "std"))]
 compile_error!("`std` feature is currently required to build this crate");
+
+#[cfg(all(feature = "mesalock_sgx", not(target_env = "sgx")))]
+#[macro_use]
+extern crate sgx_tstd as std;
 
 extern crate memchr;
 #[cfg(test)]

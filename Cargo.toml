@@ -16,18 +16,20 @@ exclude = ["/aho-corasick-debug", "/bench", "/ci/*", "/.travis.yml"]
 travis-ci = { repository = "BurntSushi/aho-corasick" }
 appveyor = { repository = "BurntSushi/regex-automata" }
 
-[workspace]
-members = ["bench", "aho-corasick-debug"]
+#[workspace]
+#members = ["bench", "aho-corasick-debug"]
 
 [lib]
 name = "aho_corasick"
 
 [features]
-default = ["std"]
+default = ["std", "mesalock_sgx"]
 std = ["memchr/use_std"]
+mesalock_sgx = ["sgx_tstd", "memchr/mesalock_sgx"]
 
 [dependencies]
-memchr = { version = "2.2.0", default-features = false }
+memchr = { git = "https://github.com/mesalock-linux/rust-memchr-sgx", version = "2.2.0", default-features = false }
+sgx_tstd = { git = "https://github.com/baidu/rust-sgx-sdk.git", optional = true }
 
 [dev-dependencies]
 doc-comment = "0.3.1"
