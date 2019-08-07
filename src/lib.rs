@@ -193,6 +193,9 @@ compile_error!("`std` feature is currently required to build this crate");
 #[macro_use]
 extern crate sgx_tstd as std;
 
+#[cfg(all(feature = "mesalock_sgx", target_env = "sgx"))]
+extern crate core;
+
 extern crate memchr;
 #[cfg(test)]
 #[macro_use]
