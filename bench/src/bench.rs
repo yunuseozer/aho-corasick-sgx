@@ -4,7 +4,7 @@ extern crate criterion;
 
 use std::time::Duration;
 
-use aho_corasick::{AhoCorasick, AhoCorasickBuilder, MatchKind};
+use aho_corasick::{packed, AhoCorasick, AhoCorasickBuilder, MatchKind};
 use criterion::{Bencher, Benchmark, Criterion, Throughput};
 
 mod build;
@@ -30,26 +30,54 @@ fn define_aho_corasick<B: AsRef<[u8]>>(
     count: usize,
     patterns: Vec<B>,
 ) {
-    let patterns: Vec<Vec<u8>> = patterns
-        .into_iter()
-        .map(|b| b.as_ref().to_vec())
-        .collect();
+    let patterns: Vec<Vec<u8>> =
+        patterns.into_iter().map(|b| b.as_ref().to_vec()).collect();
 
     let haystack = corpus.to_vec();
     let name = format!("nfa/{}", bench_name);
-    let aut = AhoCorasick::new(patterns.clone());
+    // let aut = AhoCorasick::new(patterns.clone());
+    let aut = AhoCorasickBuilder::new()
+        .match_kind(MatchKind::LeftmostFirst)
+        .dfa(false)
+        .build(patterns.clone());
     define(c, group_name, &name, corpus, move |b| {
         b.iter(|| assert_eq!(count, aut.find_iter(&haystack).count()));
     });
 
     let haystack = corpus.to_vec();
     let name = format!("dfa/{}", bench_name);
+    // let aut = AhoCorasickBuilder::new().dfa(true).build(patterns.clone());
     let aut = AhoCorasickBuilder::new()
+        .match_kind(MatchKind::LeftmostFirst)
         .dfa(true)
         .build(patterns.clone());
     define(c, group_name, &name, corpus, move |b| {
         b.iter(|| assert_eq!(count, aut.find_iter(&haystack).count()));
     });
+
+    let name = format!("packed/teddy/{}", bench_name);
+    let haystack = corpus.to_vec();
+    let mut builder = packed::Config::new().force_teddy(true).builder();
+    builder.extend(patterns.clone());
+    if let Some(searcher) = builder.build() {
+        define(c, group_name, &name, corpus, move |b| {
+            b.iter(|| {
+                assert_eq!(count, searcher.find_iter(&haystack).count())
+            });
+        });
+    }
+
+    let name = format!("packed/rabinkarp/{}", bench_name);
+    let haystack = corpus.to_vec();
+    let mut builder = packed::Config::new().force_rabin_karp(true).builder();
+    builder.extend(patterns.clone());
+    if let Some(searcher) = builder.build() {
+        define(c, group_name, &name, corpus, move |b| {
+            b.iter(|| {
+                assert_eq!(count, searcher.find_iter(&haystack).count())
+            });
+        });
+    }
 }
 
 /// Define a benchmark that tests the different combinations of Aho-Corasick
@@ -63,13 +91,12 @@ fn define_aho_corasick_dfa<B, F>(
     count: usize,
     patterns: Vec<B>,
     find_count: F,
-) where B: AsRef<[u8]>,
-        F: 'static + Clone + Fn(&AhoCorasick, &[u8]) -> usize
+) where
+    B: AsRef<[u8]>,
+    F: 'static + Clone + Fn(&AhoCorasick, &[u8]) -> usize,
 {
-    let patterns: Vec<Vec<u8>> = patterns
-        .into_iter()
-        .map(|b| b.as_ref().to_vec())
-        .collect();
+    let patterns: Vec<Vec<u8>> =
+        patterns.into_iter().map(|b| b.as_ref().to_vec()).collect();
 
     let counter = find_count.clone();
     let haystack = corpus.to_vec();
@@ -134,12 +161,12 @@ fn define(
     corpus: &[u8],
     bench: impl FnMut(&mut Bencher) + 'static,
 ) {
-
     let tput = Throughput::Bytes(corpus.len() as u32);
     let benchmark = Benchmark::new(bench_name, bench)
         .throughput(tput)
+        .sample_size(30)
         .warm_up_time(Duration::from_millis(500))
-        .measurement_time(Duration::from_secs(3));
+        .measurement_time(Duration::from_secs(2));
     c.bench(group_name, benchmark);
 }
 
@@ -152,7 +179,6 @@ fn define_long(
     corpus: &[u8],
     bench: impl FnMut(&mut Bencher) + 'static,
 ) {
-
     let tput = Throughput::Bytes(corpus.len() as u32);
     let benchmark = Benchmark::new(bench_name, bench)
         .throughput(tput)
