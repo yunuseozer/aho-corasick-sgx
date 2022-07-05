@@ -33,8 +33,8 @@ std = ["memchr/use_std"]
 mesalock_sgx = ["sgx_tstd", "memchr/mesalock_sgx"]
 
 [dependencies]
-memchr = { git = "https://github.com/mesalock-linux/rust-memchr-sgx", version = "2.2.0", default-features = false }
-sgx_tstd = { rev = "v1.1.3", git = "https://github.com/apache/teaclave-sgx-sdk.git", optional = true }
+memchr = { git = "https://github.com/yunuseozer/rust-memchr-sgx", default-features = false }
+sgx_tstd = { rev = "v1.1.4", git = "https://github.com/apache/teaclave-sgx-sdk.git", optional = true }
 
 [dev-dependencies]
 doc-comment = "0.3.1"
